@@ -1,0 +1,21 @@
+Processing trace...
+
+Processed 100000 trace records.
+
+Micro-ops: 100000
+Macro-ops: 76369
+
+Arithmetic Instructions: 33492 
+Load and Store Instructions: 31180 
+Conditional Branches Taken: 6875 
+Conditional Branches Not Taken: 7814 
+Unconditional Instructions: 3864 
+Other Instructions: 16775 
+
+Arithmetic Instructions CPI: 33492 
+Load and Store Instructions CPI: 62360 
+Conditional Branches Taken CPI: 27500 
+Conditional Branches Not Taken CPI: 31256 
+Unconditional Instructions CPI: 7728 
+Other Instructions CPI: 16775 
+Average CPI: 1.000000 
