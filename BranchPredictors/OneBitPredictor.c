@@ -11,7 +11,7 @@ int main()
     scanf("%s", str);
     printf("The entered bit pattern is: %s \n\n", str);
 
-    int state = 1; // Initialize to predict '1'
+    char state = '1'; // Initialize to predict '1'
     int predictions = 0, mispredictions = 0;
     float mispredictionRate = 0.0;
 
@@ -19,23 +19,20 @@ int main()
     {
         char bit = str[i];
 
-        if (bit == '1' && state == 0)
+        if (bit == '1' && state == '0')
         {
             mispredictions++;
-            state = 1;
+            state = '1';
         }
-        else if (bit == '0' && state == 1)
+        else if (bit == '0' && state == '1')
         {
             mispredictions++;
-            state = 0;
+            state = '0';
         }
         else
         {
             predictions++;
         }
-
-        // Print prediction and actual outcome
-        // printf("Predicted: %d, Actual: %c\n", prediction, bit);
     }
 
     mispredictionRate = (float)mispredictions / (mispredictions + predictions);

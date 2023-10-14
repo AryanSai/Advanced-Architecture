@@ -9,32 +9,66 @@
 #include <strings.h>
 #include <string.h>
 
-void oneBitPredictor(char str[])
+#define SIZE 5
+int total = 0;
+
+void twoBitPredictor(char str[])
 {
-  char state = '1'; // Initialize to predict '1'
+  char prediction_bit = '1';
+  char hysteresis_bit = '1';
   int predictions = 0, mispredictions = 0;
   float mispredictionRate = 0.0;
 
-  for (int i = 0; str[i] != '\0'; i++)
+  for (int i = 0; i < total; i++)
   {
     char bit = str[i];
-
-    if (bit == '1' && state == '0')
+    if (bit == '1')
     {
-      mispredictions++;
-      state = '1';
-    }
-    else if (bit == '0' && state == '1')
-    {
-      mispredictions++;
-      state = '0';
+      if (prediction_bit == '1' && hysteresis_bit == '1')
+      {
+        predictions++;
+      }
+      else if (prediction_bit == '1' && hysteresis_bit == '0')
+      {
+        hysteresis_bit = '1';
+        predictions++;
+      }
+      else if (prediction_bit == '0' && hysteresis_bit == '1')
+      {
+        prediction_bit = '1';
+        hysteresis_bit = '0';
+        mispredictions++;
+      }
+      else
+      {
+        hysteresis_bit = '1';
+        mispredictions++;
+      }
     }
     else
     {
-      predictions++;
+      if (prediction_bit == '1' && hysteresis_bit == '1')
+      {
+        hysteresis_bit = '0'; 
+        mispredictions++;
+      }
+      else if (prediction_bit == '1' && hysteresis_bit == '0')
+      {
+        prediction_bit = '0';
+        hysteresis_bit = '1';
+        mispredictions++;
+      }
+      else if (prediction_bit == '0' && hysteresis_bit == '1')
+      {
+        hysteresis_bit = '0'; 
+        predictions++;
+      }
+      else
+      {
+        predictions++;
+      }
     }
   }
-
   mispredictionRate = (float)mispredictions / (mispredictions + predictions);
 
   printf("Total Predictions = %d \n", predictions);
@@ -112,10 +146,12 @@ void simulate(FILE *inputFile, FILE *outputFile)
       if (TNnotBranch == 'T')
       {
         strncat(bitString, &t, 1);
+        total++;
       }
       else if (TNnotBranch == 'N')
       {
         strncat(bitString, &nt, 1);
+        total++;
       }
       branchCount++;
     }
@@ -127,7 +163,7 @@ void simulate(FILE *inputFile, FILE *outputFile)
     }
   }
   fprintf(outputFile, "%s", bitString);
-  oneBitPredictor(bitString);
+  twoBitPredictor(bitString);
   // printf("%s", bitString);
 }
 

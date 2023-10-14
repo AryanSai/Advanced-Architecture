@@ -8,39 +8,93 @@
 #include <stdlib.h>
 #include <strings.h>
 #include <string.h>
+int total = 0;
 
-void oneBitPredictor(char str[])
+char *intToBinaryString(int num)
 {
-  char state = '1'; // Initialize to predict '1'
-  int predictions = 0, mispredictions = 0;
-  float mispredictionRate = 0.0;
-
-  for (int i = 0; str[i] != '\0'; i++)
+  int bitCount = sizeof(num) * 8;
+  char *binaryString = (char *)malloc(bitCount + 1);
+  if (binaryString == NULL)
   {
-    char bit = str[i];
+    printf("Memory allocation failed.\n");
+    exit(1);
+  }
 
-    if (bit == '1' && state == '0')
+  int startIndex = 0;
+  for (int i = 0; i < bitCount; i++)
+  {
+    int bit = (num >> (bitCount - 1 - i)) & 1;
+    if (bit == 1 || startIndex > 0)
     {
-      mispredictions++;
-      state = '1';
-    }
-    else if (bit == '0' && state == '1')
-    {
-      mispredictions++;
-      state = '0';
-    }
-    else
-    {
-      predictions++;
+      binaryString[startIndex++] = bit + '0';
     }
   }
 
-  mispredictionRate = (float)mispredictions / (mispredictions + predictions);
+  if (startIndex == 0)
+  {
+    binaryString[startIndex++] = '0';
+  }
+  binaryString[startIndex] = '\0';
+  return binaryString;
+}
 
-  printf("Total Predictions = %d \n", predictions);
-  printf("Total MisPredictions = %d \n", mispredictions);
-  printf("MisPrediction Rate = %f \n", mispredictionRate);
-  printf("Accuracy Rate = %f \n", 1 - mispredictionRate);
+void twoBitPredictor(char str[], char bits[])
+{
+  char prediction_bit = bits[0];
+  char hysteresis_bit = bits[1];
+  int predictions = 0, mispredictions = 0;
+  float mispredictionRate = 0.0;
+
+  for (int i = 0; i < total; i++)
+  {
+    char bit = str[i];
+    if (bit == '1')
+    {
+      if (prediction_bit == '1' && hysteresis_bit == '1')
+      {
+        predictions++;
+      }
+      else if (prediction_bit == '1' && hysteresis_bit == '0')
+      {
+        hysteresis_bit = '1';
+        predictions++;
+      }
+      else if (prediction_bit == '0' && hysteresis_bit == '1')
+      {
+        prediction_bit = '1';
+        hysteresis_bit = '0';
+        mispredictions++;
+      }
+      else
+      {
+        hysteresis_bit = '1';
+        mispredictions++;
+      }
+    }
+    else
+    {
+      if (prediction_bit == '1' && hysteresis_bit == '1')
+      {
+        hysteresis_bit = '0';
+        mispredictions++;
+      }
+      else if (prediction_bit == '1' && hysteresis_bit == '0')
+      {
+        prediction_bit = '0';
+        hysteresis_bit = '1';
+        mispredictions++;
+      }
+      else if (prediction_bit == '0' && hysteresis_bit == '1')
+      {
+        hysteresis_bit = '0';
+        predictions++;
+      }
+      else
+      {
+        predictions++;
+      }
+    }
+  }
 }
 
 void simulate(FILE *inputFile, FILE *outputFile)
@@ -64,11 +118,15 @@ void simulate(FILE *inputFile, FILE *outputFile)
   int64_t totalMicroops = 0;
   int64_t totalMacroops = 0;
 
-  char bitString[1000];
-  bitString[0] = '\0';
-  char t = '1';
-  char nt = '0';
-  int branchCount = 0;
+  fprintf(outputFile, "Processing trace...\n");
+
+  // table
+  char table[256][2];
+  for (int i = 0; i < 256; i++)
+  {
+    table[i][0] = '1';
+    table[i][1] = '1';
+  }
 
   while (true)
   {
@@ -106,29 +164,23 @@ void simulate(FILE *inputFile, FILE *outputFile)
     {
       break;
     }
-
-    if (targetAddressTakenBranch != 0 && conditionRegister == 'R')
-    {
-      if (TNnotBranch == 'T')
-      {
-        strncat(bitString, &t, 1);
-      }
-      else if (TNnotBranch == 'N')
-      {
-        strncat(bitString, &nt, 1);
-      }
-      branchCount++;
-    }
-
     if (result != 14)
     {
       fprintf(stderr, "Error parsing trace at line %" PRIi64 "\n", totalMicroops);
       abort();
     }
+
+    if (targetAddressTakenBranch != 0 && conditionRegister == 'R')
+    {
+      uint16_t extracted_bits = (uint16_t)(instructionAddress & 0xFF);
+      int index = (int)extracted_bits;
+
+      char bit_string[3]; // Make sure there is enough space for the null terminator
+      strcpy(bit_string, table[index]);
+
+      twoBitPredictor(bit_string, table[index]);
+    }
   }
-  fprintf(outputFile, "%s", bitString);
-  oneBitPredictor(bitString);
-  // printf("%s", bitString);
 }
 
 int main(int argc, char *argv[])

@@ -7,43 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <string.h>
 
-void oneBitPredictor(char str[])
-{
-  char state = '1'; // Initialize to predict '1'
-  int predictions = 0, mispredictions = 0;
-  float mispredictionRate = 0.0;
-
-  for (int i = 0; str[i] != '\0'; i++)
-  {
-    char bit = str[i];
-
-    if (bit == '1' && state == '0')
-    {
-      mispredictions++;
-      state = '1';
-    }
-    else if (bit == '0' && state == '1')
-    {
-      mispredictions++;
-      state = '0';
-    }
-    else
-    {
-      predictions++;
-    }
-  }
-
-  mispredictionRate = (float)mispredictions / (mispredictions + predictions);
-
-  printf("Total Predictions = %d \n", predictions);
-  printf("Total MisPredictions = %d \n", mispredictions);
-  printf("MisPrediction Rate = %f \n", mispredictionRate);
-  printf("Accuracy Rate = %f \n", 1 - mispredictionRate);
-}
-
-void simulate(FILE *inputFile, FILE *outputFile)
+void simulate(FILE* inputFile, FILE* outputFile)
 {
   // See the documentation to understand what these variables mean.
   int32_t microOpCount;
@@ -63,18 +28,13 @@ void simulate(FILE *inputFile, FILE *outputFile)
 
   int64_t totalMicroops = 0;
   int64_t totalMacroops = 0;
-
-  char bitString[1000];
-  bitString[0] = '\0';
-  char t = '1';
-  char nt = '0';
-  int branchCount = 0;
-
-  while (true)
-  {
-    int result = fscanf(inputFile,
+  
+  fprintf(outputFile, "Processing trace...\n");
+  
+  while (true) {
+    int result = fscanf(inputFile, 
                         "%" SCNi32
-                        "%" SCNx64
+                        "%" SCNx64 
                         "%" SCNi32
                         "%" SCNi32
                         "%" SCNi32
@@ -101,52 +61,46 @@ void simulate(FILE *inputFile, FILE *outputFile)
                         &targetAddressTakenBranch,
                         macroOperation,
                         microOperation);
-
-    if (result == EOF)
-    {
+                        
+    if (result == EOF) {
       break;
     }
 
-    if (targetAddressTakenBranch != 0 && conditionRegister == 'R')
-    {
-      if (TNnotBranch == 'T')
-      {
-        strncat(bitString, &t, 1);
-      }
-      else if (TNnotBranch == 'N')
-      {
-        strncat(bitString, &nt, 1);
-      }
-      branchCount++;
-    }
-
-    if (result != 14)
-    {
+    if (result != 14) {
       fprintf(stderr, "Error parsing trace at line %" PRIi64 "\n", totalMicroops);
       abort();
     }
+
+    // For each micro-op
+    totalMicroops++;
+
+    // For each macro-op:
+    if (microOpCount == 1) {
+      totalMacroops++;
+    }
   }
-  fprintf(outputFile, "%s", bitString);
-  oneBitPredictor(bitString);
-  // printf("%s", bitString);
+  
+  fprintf(outputFile, "Processed %" PRIi64 " trace records.\n", totalMicroops);
+
+  fprintf(outputFile, "Micro-ops: %" PRIi64 "\n", totalMicroops);
+  fprintf(outputFile, "Macro-ops: %" PRIi64 "\n", totalMacroops);
+
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[]) 
 {
   FILE *inputFile = stdin;
   FILE *outputFile = stdout;
-
-  if (argc >= 2)
-  {
+  
+  if (argc >= 2) {
     inputFile = fopen(argv[1], "r");
     assert(inputFile != NULL);
   }
-  if (argc >= 3)
-  {
+  if (argc >= 3) {
     outputFile = fopen(argv[2], "w");
     assert(outputFile != NULL);
   }
-
+  
   simulate(inputFile, outputFile);
   return 0;
 }
