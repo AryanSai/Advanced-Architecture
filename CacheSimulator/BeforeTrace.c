@@ -1,7 +1,14 @@
+/*  Mini Project : MTCS-102 P
+
+    Submitted by: Aryan Sai Arvapelly, Reg. No. 23352, 1st MTech CS
+
+    Goal: Simulating a 2 Level Cache where L1 cache is 4-Way Set Assosciative and L2 is direct-mapped.
+          The replacement policy used is Least Recently Used(LRU).
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
 
 #define CACHE_SIZE_L1 16
 #define CACHE_SIZE_L2 64
@@ -55,7 +62,7 @@ void initCacheLevel2(CacheLevel2 *cacheL2)
 bool readCache(CacheLevel1 *cache, CacheLevel2 *cacheL2, uint64_t address, char *data)
 {
     uint64_t tag = address / CACHE_LINE_SIZE; // Determine the tag
-    int set_index = tag % CACHE_SIZE_L1;      // Determine the set index
+    int set_index = tag % CACHE_SIZE_L1; // Determine the set index
 
     for (int i = 0; i < ASSOCIATIVITY; i++)
     {
@@ -86,11 +93,18 @@ bool readCache(CacheLevel1 *cache, CacheLevel2 *cacheL2, uint64_t address, char 
                     break;
                 }
             }
+
             // Cache miss in L1, hit in L2, so we count this as an L1 miss
             printf("L1 Cache Miss at address 0x%lx\n", address);
+            // printf("L1 Cache Miss at address 0x%lx, Fetching from L2\n", address);
+
             return true;
         }
     }
+
+    // Cache miss in L2 cache as well, count as L1 and L2 miss
+    printf("L1 Cache Miss at address 0x%lx, Fetching from L2\n", address);
+
     return false;
 }
 
@@ -140,50 +154,35 @@ int main()
     initCacheLevel1(&cache);
     initCacheLevel2(&cacheL2);
 
-    FILE *traceFile = fopen("memory_trace.txt", "r");
+    // Example addresses and data
+    uint64_t addresses[] = {0x1234, 0x5678, 0x9ABC, 0xDEAD, 0xBEEF, 0xC0FF};
+    char data[] = {'A', 'B', 'C', 'D', 'E', 'F'};
 
-    if (traceFile == NULL)
+    // Write data to the cache
+    for (int i = 0; i < sizeof(addresses) / sizeof(addresses[0]); i++)
     {
-        printf("Error: Unable to open memory trace file.\n");
-        return 1;
+        uint64_t address = addresses[i];
+        char value = data[i];
+
+        printf("Writing data to address 0x%lx: %c\n", address, value);
+        writeCache(&cache, &cacheL2, address, value);
     }
 
-    char operation;
-    uint64_t address;
-    char data;
-
-    while (fscanf(traceFile, " %c %lx", &operation, &address) == 2)
+    // Read data from the cache
+    for (int i = 0; i < sizeof(addresses) / sizeof(addresses[0]); i++)
     {
-        if (operation == 'R')
+        uint64_t address = addresses[i];
+        char readData;
+
+        if (readCache(&cache, &cacheL2, address, &readData))
         {
-            char readData;
-            if (readCache(&cache, &cacheL2, address, &readData))
-            {
-                printf("Read from 0x%llx: Data = %c\n", (unsigned long long)address, readData);
-            }
-            else
-            {
-                // Cache miss in both L1 and L2 caches
-                printf("Cache Miss for address 0x%llx\n", (unsigned long long)address);
-            }
-        }
-        else if (operation == 'W')
-        {
-            if (fscanf(traceFile, " %c", &data) != 1)
-            {
-                printf("Error: Write operation missing data.\n");
-                break;
-            }
-            writeCache(&cache, &cacheL2, address, data);
-            printf("Write to 0x%llx: Data = %c\n", (unsigned long long)address, data);
+            printf("L1 Cache Hit for address 0x%lx: Data = %c\n", address, readData);
         }
         else
         {
-            printf("Error: Invalid operation in trace file.\n");
-            break;
+            printf("L1 Cache Miss for address 0x%lx\n", address);
         }
     }
 
-    fclose(traceFile);
     return 0;
 }
