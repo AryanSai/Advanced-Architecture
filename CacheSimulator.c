@@ -10,10 +10,10 @@
 
 typedef struct CacheLine
 {
-    bool valid;
-    uint64_t tag;
-    char data[CACHE_LINE_SIZE];
-    int timestamp; // For LRU replacement
+    bool valid;                 // bool to keep track of validity of the line in the cache
+    uint64_t tag;               
+    char data[CACHE_LINE_SIZE]; // Data is stored as strings, hence each line is a character array
+    int timestamp;              // For LRU replacement
 } CacheLine;
 
 typedef struct CacheSet
@@ -96,8 +96,8 @@ bool readCache(CacheLevel1 *cache, CacheLevel2 *cacheL2, uint64_t address, char 
 
 void writeCache(CacheLevel1 *cache, CacheLevel2 *cacheL2, uint64_t address, char data)
 {
-    uint64_t tag = address / CACHE_LINE_SIZE;
-    int set_index = tag % CACHE_SIZE_L1; // Determine the set index
+    uint64_t tag = address / CACHE_LINE_SIZE; // Determine the tag
+    int set_index = tag % CACHE_SIZE_L1;      // Determine the set index
 
     // Find the least recently used cache line in the set
     int lruIndex = 0;
@@ -137,9 +137,11 @@ int main()
     CacheLevel1 cache;
     CacheLevel2 cacheL2;
 
+    // Initialise the cache
     initCacheLevel1(&cache);
     initCacheLevel2(&cacheL2);
 
+    // Open the trace file to process
     FILE *traceFile = fopen("memory_trace.txt", "r");
 
     if (traceFile == NULL)
@@ -148,42 +150,52 @@ int main()
         return 1;
     }
 
-    char operation;
-    uint64_t address;
-    char data;
+    char operation;   // The operation can be either a read(R) or a write(W)
+    uint64_t address; // Address of the data location
+    char data;        // The data to be cached in case of a Write operation
+
+    // total reads; hits and misses count
+    int total = 0, hits = 0, misses = 0;
 
     while (fscanf(traceFile, " %c %lx", &operation, &address) == 2)
     {
         if (operation == 'R')
         {
-            char readData;
+            total++;
+            char readData; // the data read from the cache
             if (readCache(&cache, &cacheL2, address, &readData))
             {
-                printf("Read from 0x%llx: Data = %c\n", (unsigned long long)address, readData);
+                hits++;
+                printf("Read from 0x%lx: Data = %c\n", (unsigned long)address, readData);
             }
             else
             {
                 // Cache miss in both L1 and L2 caches
-                printf("Cache Miss for address 0x%llx\n", (unsigned long long)address);
+                printf("Cache Miss for address 0x%lx\n", (unsigned long)address);
+                misses++;
             }
         }
         else if (operation == 'W')
         {
             if (fscanf(traceFile, " %c", &data) != 1)
             {
-                printf("Error: Write operation missing data.\n");
+                printf("Error: Missing data in the Write Operation.\n");
                 break;
             }
             writeCache(&cache, &cacheL2, address, data);
-            printf("Write to 0x%llx: Data = %c\n", (unsigned long long)address, data);
+            printf("Write to 0x%lx: Data = %c\n", (unsigned long)address, data);
         }
         else
         {
-            printf("Error: Invalid operation in trace file.\n");
+            printf("Error: Invalid operation!\n");
             break;
         }
     }
-
+    printf("\nTotal Number of Reads: %d\n", total);
+    printf("Total Hits: %d\n", hits);
+    printf("Total Misses: %d\n", misses);
+    float ratio = (float)hits / total;
+    printf("Hit Ratio: %f\n", ratio);
     fclose(traceFile);
     return 0;
 }
