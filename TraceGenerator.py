@@ -8,7 +8,7 @@ ASSOCIATIVITY = 4
 
 # Define memory address range
 MEM_SIZE = 1024  # Example: 1 KB
-MEMORY_ACCESS_COUNT = 100
+MEMORY_ACCESS_COUNT = 1000
 
 # Create a list of memory addresses with varying access patterns
 memory_accesses = []
@@ -28,7 +28,7 @@ for _ in range(MEMORY_ACCESS_COUNT):
         memory_accesses.append((operation, address, data))
 
     # Add prefetch addresses (assuming a stride of 16 bytes for simplicity)
-    for i in range(1, 4):
+    for i in range(1, 6):
         prefetch_address = (address + i * CACHE_LINE_SIZE) % MEM_SIZE
         memory_accesses.append(("R", prefetch_address))
 
